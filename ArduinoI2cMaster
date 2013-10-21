@@ -5,49 +5,42 @@
 RCSwitch mySwitch = RCSwitch();
 
 String inputString="", dataString="", tempString="", nullString="";
-int Address=9, Quantity=10, operation=1, j=0;
+int Address=9, Quantity=24;
+byte j=0;
 int AddressArray[100];
-
-const int wire=1, rc=2;
 
 void setup(){
   mySwitch.enableTransmit(4);
   Wire.begin();
-  Serial.begin(115200);
+  Serial.begin(9600);
   pinMode(A4, INPUT_PULLUP);
   pinMode(A5, INPUT_PULLUP);
-  Serial.print("Getting all I2C addressies:\n");
-  for(int i=1;i<100;i++){
-    Wire.beginTransmission(i);Wire.write("wire");Wire.endTransmission();delay(10);
-    Wire.requestFrom(i,Quantity,true);while(Wire.available()){byte c=Wire.read();if(c!=255)inputString+=(char)c;}
-    if(inputString != nullString){AddressArray[j]=i;j++;}inputString=nullString;
-  }
-  for(int i=0;i<j;i++){
-    Serial.print(AddressArray[i]);if(i<j-1)Serial.print(", ");else{Serial.println(";\nDone\n");}
-  }
+  
+  getAddresses();
   digitalWrite(LED,1);
 }
 
-boolean chechAddress(){
-  boolean flag=0;
-  for(int i=0;i<j;i++){if(Address==AddressArray[i]){flag=1;break;}}
-  if(flag==1)return 1; else return 0;
+void loop(){
+  digitalWrite(LED,1);
 }
-
-void loop(){}
 
 void serialEvent() {
   digitalWrite(LED,0);
-  inputString=nullString;while(Serial.available()>0){inputString+=(char)Serial.read();delayMicroseconds(100); }
+  inputString=nullString;
+  while(Serial.available()>0){
+    inputString+=(char)Serial.read();
+    delay(10);
+  }
+  stringHandle();
+}
 
-  if(inputString.startsWith("wire"))operation=wire;
-  if(inputString.startsWith("rc"))operation=rc;
-
+void stringHandle(){
   if(inputString.indexOf("'")>=0)dataString=inputString.substring(inputString.indexOf("'")+1,inputString.lastIndexOf("'"));
   else if(inputString.indexOf('"')>=0)dataString=inputString.substring(inputString.indexOf('"')+1,inputString.lastIndexOf('"'));
   else dataString=inputString.substring(inputString.lastIndexOf(" ")+1,inputString.length());
 
-  if(inputString.indexOf("-")>=0){ //ako je jedna opcija zadana
+  //ako je jedna opcija zadana
+  if(inputString.indexOf("-")>=0){
     if(inputString.charAt(inputString.indexOf("-")+1)=='a'){
       tempString=inputString.substring(inputString.indexOf("a")+2,inputString.indexOf(" ",inputString.indexOf("a")+2));
       if(tempString.toInt()>=0)Address=tempString.toInt();
@@ -61,7 +54,8 @@ void serialEvent() {
     }
   }
 
-  if(inputString.indexOf("-",inputString.indexOf("-")+1)>=0){// ako je druga pocija zadana
+  // ako je druga opcija zadana
+  if(inputString.indexOf("-",inputString.indexOf("-")+1)>=0){
     if(inputString.charAt(inputString.indexOf("-",inputString.indexOf("-")+1)+1)=='a'){
       tempString=inputString.substring(inputString.indexOf("a")+2,inputString.indexOf(" ",inputString.indexOf("a")+2));
       if(tempString.toInt()>=0)Address=tempString.toInt();
@@ -74,67 +68,116 @@ void serialEvent() {
       if(tempString.toInt()>0)Quantity=tempString.toInt();
     }
   }
-
+  if(inputString.startsWith("wire"))wire();
+  if(inputString.startsWith("rc")){
+    dataString=inputString.substring(inputString.indexOf(" ")+1,inputString.length());rc();
+  }
   inputString=nullString;
+}
 
-  if(operation==wire){
-    byte data[dataString.length()];for(byte i=0;i<dataString.length();i++)data[i]=dataString.charAt(i);
-    if(dataString=="wire"){
-      Serial.print("Getting all I2C addressies:\n");j=0;
-      for(int i=1;i<100;i++){
-        Wire.beginTransmission(i);Wire.write(data,dataString.length());Wire.endTransmission();delay(10);
-        Wire.requestFrom(i,Quantity,true);while(Wire.available()){byte c=Wire.read();if(c!=255)inputString+=(char)c;}
-        if(inputString != nullString){AddressArray[j]=i;j++;}inputString=nullString;
-      }
-      for(int i=0;i<j;i++){
-        Serial.print(AddressArray[i]);if(i<j-1)Serial.print(", ");
-        else{Serial.println(";\nDone\n");}
-      }
+void wire(){
+  if(dataString=="wire" || Address<0)getAddresses();
+  else if(chechAddress()){
+    byte l=dataString.length();
+    byte data[l];
+    for(byte i=0;i<l;i++)
+    data[i]=dataString.charAt(i);
+    Wire.beginTransmission(Address);
+    Wire.write(data,l);
+    Wire.endTransmission();
+    delay(100);
+    while(Wire.available()){
+      byte c=Wire.read();
+      if(c!=255)inputString+=(char)c;
     }
-    else if(Address==0){
-      for(int i=0;i<j;i++){
-        Wire.beginTransmission(AddressArray[i]);Wire.write(data,dataString.length());Wire.endTransmission();delay(100);
-        Wire.requestFrom(AddressArray[i],Quantity,true);
-        while(Wire.available()){byte c=Wire.read();if(c!=255)inputString+=(char)c;}
-        Serial.print("Wire sent: ");Serial.println(dataString);
-        Serial.print("Device: ");Serial.println(AddressArray[i]);
-        Serial.print("Bytes to receive: ");Serial.println(Quantity);
-        if(inputString=="yes")Serial.println("Transmission succeed");
-        else if(inputString=="no")Serial.println("Transmission incorrect");
-        else if(inputString==nullString)Serial.println("Transmission falied");
-        else Serial.println(inputString);inputString=nullString;
-        Serial.println();
-      }
-    }
-    else if(chechAddress()){
-      Wire.beginTransmission(Address);Wire.write(data,dataString.length());Wire.endTransmission();delay(100);
-      Wire.requestFrom(Address,Quantity,true);
-      while(Wire.available()){byte c=Wire.read();if(c!=255)inputString+=(char)c;}
-      Serial.print("Wire sent: ");Serial.println(dataString);
-      Serial.print("Device: ");Serial.println(Address);
-      Serial.print("Bytes to receive: ");Serial.println(Quantity);
-      if(inputString=="yes")Serial.println("Transmission succeed");
-      else if(inputString=="no")Serial.println("Transmission incorrect");
-      else if(inputString==nullString)Serial.println("Transmission falied");
-      else Serial.println(inputString);
-      Serial.println();
-    }
-    else{Serial.print("Address ");Serial.print(Address);Serial.println(" is invalid\nPlease select right address\n");}
   }
-  else if(operation==rc){
-    Serial.print("RC sent: ");Serial.println(dataString);
-    if(dataString=="A")mySwitch.send("010101010100010101010001");
-    else if(dataString=="a")mySwitch.send("010101010100010101010100");
-    else if(dataString=="B")mySwitch.send("010101010101000101010001");
-    else if(dataString=="b")mySwitch.send("010101010101000101010100");
-    else if(dataString=="C")mySwitch.send("010101010101010001010001");
-    else if(dataString=="c")mySwitch.send("010101010101010001010100");
-    else if(dataString=="D")mySwitch.send("010101010101010100010001");
-    else if(dataString=="d")mySwitch.send("010101010101010100010100");
-    else if(dataString=="E")mySwitch.send("000101010100010101010001");
-    else if(dataString=="e")mySwitch.send("000101010100010101010100");
-    else Serial.println("Wrong comand");
+}
+
+void getAddresses(){
+  j=0;
+  for(int i=1;i<100;i++){
+    Wire.beginTransmission(i);
+    Wire.write("wire");
+    Wire.endTransmission();
+    delay(10);
+    Wire.requestFrom(i,Quantity,true);
+    while(Wire.available()){
+      byte c=Wire.read();
+      if(c!=255)inputString+=(char)c;
+    }
+    if(inputString != nullString){
+      AddressArray[j]=i;j++;
+    }
+    inputString=nullString;
   }
-  else Serial.println("Unknown operation");
-  digitalWrite(LED,1);
+}
+
+boolean chechAddress(){
+  boolean flag=0;
+  for(byte i=0;i<j;i++){
+    if(Address==AddressArray[i])
+      {flag=1;break;}
+  }
+  if(flag==0){
+    Wire.beginTransmission(Address);
+    Wire.write("wire");
+    Wire.endTransmission();
+    delay(10);
+    Wire.requestFrom(Address,Quantity,true);
+    while(Wire.available()){
+      byte c=Wire.read();
+      if(c!=255)inputString+=(char)c;
+    }
+    if(inputString != nullString){
+      AddressArray[j+1]=Address;
+      flag=1;
+    }
+    inputString=nullString;
+  }
+  if(flag==1)return 1;
+  else return 0;
+}
+
+void rc(){
+  byte l=dataString.length(), Q=24;  
+  if(dataString.startsWith("I")){
+    tempString=dataString.substring(1,l);
+    int value=tempString.toInt();
+    mySwitch.send(value,16);
+  }
+  else if(dataString.startsWith("b") && l>1){
+    long value=0;
+    int bitArray[l];
+    byte k=0;
+    for(byte i=l-1;i>0;i--){
+      int charValue=dataString.charAt(i)-48;
+      if(charValue==1 || charValue==0)value+=(charValue)*pow(k);
+      else k--;      
+      k++;
+    }
+    if(value<=2147483647) Q=32;
+    if(value<16777216) Q=24;
+    if(value<65536) Q=16;
+    if(value<256) Q=8;
+    mySwitch.send(value,Q);
+    Serial.print(value);Serial.print(" ");Serial.println(Q);
+  }
+  
+  else if(dataString=="A")mySwitch.send(5588305,Q);
+  else if(dataString=="a")mySwitch.send(5588308,Q);
+  else if(dataString=="B")mySwitch.send(5591377,Q);
+  else if(dataString=="b")mySwitch.send(5591380,Q);
+  else if(dataString=="C")mySwitch.send(5592145,Q);
+  else if(dataString=="c")mySwitch.send(5592148,Q);
+  else if(dataString=="D")mySwitch.send(5592337,Q);
+  else if(dataString=="d")mySwitch.send(5592340,Q);
+  else if(dataString=="E")mySwitch.send(1394001,Q);
+  else if(dataString=="e")mySwitch.send(1394004,Q);
+}
+
+long pow(int p){
+  long value=1;
+  for(int i=1;i<=p;i++)
+    value=value*2;
+  return value;
 }
