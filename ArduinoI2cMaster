@@ -15,9 +15,7 @@ void setup(){
   Serial.begin(9600);
   pinMode(A4, INPUT_PULLUP);
   pinMode(A5, INPUT_PULLUP);
-  
   getAddresses();
-  digitalWrite(LED,1);
 }
 
 void loop(){
@@ -35,42 +33,53 @@ void serialEvent() {
 }
 
 void stringHandle(){
-  if(inputString.indexOf("'")>=0)dataString=inputString.substring(inputString.indexOf("'")+1,inputString.lastIndexOf("'"));
-  else if(inputString.indexOf('"')>=0)dataString=inputString.substring(inputString.indexOf('"')+1,inputString.lastIndexOf('"'));
-  else dataString=inputString.substring(inputString.lastIndexOf(" ")+1,inputString.length());
 
-  //ako je jedna opcija zadana
-  if(inputString.indexOf("-")>=0){
-    if(inputString.charAt(inputString.indexOf("-")+1)=='a'){
-      tempString=inputString.substring(inputString.indexOf("a")+2,inputString.indexOf(" ",inputString.indexOf("a")+2));
-      if(tempString.toInt()>=0)Address=tempString.toInt();
-      if(tempString=="led")Address=20;
-      if(tempString=="test")Address=9;
-      if(tempString=="all")Address=0;
-    }  
-    if(inputString.charAt(inputString.indexOf("-")+1)=='q'){
-      tempString=inputString.substring(inputString.indexOf("q")+2,inputString.indexOf(" ",inputString.indexOf("q")+2));
-      if(tempString.toInt()>0)Quantity=tempString.toInt();
-    }
-  }
+  if(inputString.startsWith("wire")){
+    byte D=inputString.indexOf("-");
+    byte a=inputString.indexOf("a");
+    byte q=inputString.indexOf("q");
+    
+    if(inputString.indexOf("'")>=0)
+    dataString=inputString.substring(inputString.indexOf("'")+1,inputString.lastIndexOf("'"));
+    else if(inputString.indexOf('"')>=0)
+    dataString=inputString.substring(inputString.indexOf('"')+1,inputString.lastIndexOf('"'));
+    else dataString=inputString.substring(inputString.lastIndexOf(" ")+1,inputString.length());
 
-  // ako je druga opcija zadana
-  if(inputString.indexOf("-",inputString.indexOf("-")+1)>=0){
-    if(inputString.charAt(inputString.indexOf("-",inputString.indexOf("-")+1)+1)=='a'){
-      tempString=inputString.substring(inputString.indexOf("a")+2,inputString.indexOf(" ",inputString.indexOf("a")+2));
-      if(tempString.toInt()>=0)Address=tempString.toInt();
-      if(tempString=="led")Address=20;
-      if(tempString=="test")Address=9;
-      if(tempString=="all")Address=0;
+    //ako je jedna opcija zadana
+    if(D>=0){
+      if(inputString.charAt(D+1)=='a'){
+        tempString=inputString.substring(a+2,inputString.indexOf(" ",a+2));
+        if(tempString.toInt()>=0)Address=tempString.toInt();
+        if(tempString=="led")Address=20;
+        if(tempString=="test")Address=9;
+        if(tempString=="all")Address=0;
+      }  
+      if(inputString.charAt(D+1)=='q'){
+        tempString=inputString.substring(q+2,inputString.indexOf(" ",q+2));
+        if(tempString.toInt()>0)Quantity=tempString.toInt();
+      }
     }
-    if(inputString.charAt(inputString.indexOf("-",inputString.indexOf("-")+1)+1)=='q'){
-      tempString=inputString.substring(inputString.indexOf("q")+2,inputString.indexOf(" ",inputString.indexOf("q")+2));
-      if(tempString.toInt()>0)Quantity=tempString.toInt();
+
+    // ako je druga opcija zadana
+    byte D1=inputString.indexOf("-",D+1);
+    if(D1>=0){
+      if(inputString.charAt(D1+1)=='a'){
+        tempString=inputString.substring(a+2,inputString.indexOf(" ",a+2));
+        if(tempString.toInt()>=0)Address=tempString.toInt();
+        if(tempString=="led")Address=20;
+        if(tempString=="test")Address=9;
+        if(tempString=="all")Address=0;
+      }
+      if(inputString.charAt(D1+1)=='q'){
+        tempString=inputString.substring(q+2,inputString.indexOf(" ",q+2));
+        if(tempString.toInt()>0)Quantity=tempString.toInt();
+      }
     }
+    wire();
   }
-  if(inputString.startsWith("wire"))wire();
   if(inputString.startsWith("rc")){
-    dataString=inputString.substring(inputString.indexOf(" ")+1,inputString.length());rc();
+    dataString=inputString.substring(inputString.indexOf(" ")+1,inputString.length());
+    rc();
   }
   inputString=nullString;
 }
@@ -147,11 +156,12 @@ void rc(){
   }
   else if(dataString.startsWith("b") && l>1){
     long value=0;
-    int bitArray[l];
+    byte bitArray[l];
     byte k=0;
     for(byte i=l-1;i>0;i--){
-      int charValue=dataString.charAt(i)-48;
-      if(charValue==1 || charValue==0)value+=(charValue)*pow(k);
+      byte charValue=dataString.charAt(i)-48;
+      if(charValue==1 || charValue==0)
+        value+=(charValue)*pow(k);
       else k--;      
       k++;
     }
@@ -160,19 +170,18 @@ void rc(){
     if(value<65536) Q=16;
     if(value<256) Q=8;
     mySwitch.send(value,Q);
-    Serial.print(value);Serial.print(" ");Serial.println(Q);
   }
-  
-  else if(dataString=="A")mySwitch.send(5588305,Q);
-  else if(dataString=="a")mySwitch.send(5588308,Q);
-  else if(dataString=="B")mySwitch.send(5591377,Q);
-  else if(dataString=="b")mySwitch.send(5591380,Q);
-  else if(dataString=="C")mySwitch.send(5592145,Q);
-  else if(dataString=="c")mySwitch.send(5592148,Q);
-  else if(dataString=="D")mySwitch.send(5592337,Q);
-  else if(dataString=="d")mySwitch.send(5592340,Q);
-  else if(dataString=="E")mySwitch.send(1394001,Q);
-  else if(dataString=="e")mySwitch.send(1394004,Q);
+
+  else if(dataString=="A")mySwitch.send(5588305,24);
+  else if(dataString=="a")mySwitch.send(5588308,24);
+  else if(dataString=="B")mySwitch.send(5591377,24);
+  else if(dataString=="b")mySwitch.send(5591380,24);
+  else if(dataString=="C")mySwitch.send(5592145,24);
+  else if(dataString=="c")mySwitch.send(5592148,24);
+  else if(dataString=="D")mySwitch.send(5592337,24);
+  else if(dataString=="d")mySwitch.send(5592340,24);
+  else if(dataString=="E")mySwitch.send(1394001,24);
+  else if(dataString=="e")mySwitch.send(1394004,24);
 }
 
 long pow(int p){
