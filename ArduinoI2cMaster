@@ -4,10 +4,11 @@
 
 RCSwitch mySwitch = RCSwitch();
 
-String inputString="", dataString="", tempString="", nullString="";
+String inputString="", dataString="", tempString="", nullString="", returnString="none";
 int Address=9, Quantity=24;
 byte j=0;
 int AddressArray[100];
+boolean led=0;
 
 void setup(){
   mySwitch.enableTransmit(4);
@@ -19,11 +20,9 @@ void setup(){
 }
 
 void loop(){
-  digitalWrite(LED,1);
 }
 
-void serialEvent() {
-  digitalWrite(LED,0);
+void serialEvent(){
   inputString=nullString;
   while(Serial.available()>0){
     inputString+=(char)Serial.read();
@@ -33,8 +32,16 @@ void serialEvent() {
 }
 
 void stringHandle(){
+  if(inputString=="get")Serial.println(returnString);
+  
+  else if(inputString=="led"){
+    led=!led;
+    digitalWrite(LED,led);
+    returnString=nullString;
+    returnString+=led;
+  }
 
-  if(inputString.startsWith("wire")){
+  else if(inputString.startsWith("wire")){
     byte D=inputString.indexOf("-");
     byte a=inputString.indexOf("a");
     byte q=inputString.indexOf("q");
@@ -75,13 +82,14 @@ void stringHandle(){
         if(tempString.toInt()>0)Quantity=tempString.toInt();
       }
     }
+    inputString=nullString;
     wire();
   }
-  if(inputString.startsWith("rc")){
+  else if(inputString.startsWith("rc")){
     dataString=inputString.substring(inputString.indexOf(" ")+1,inputString.length());
+    inputString=nullString;
     rc();
   }
-  inputString=nullString;
 }
 
 void wire(){
@@ -100,6 +108,12 @@ void wire(){
       if(c!=255)inputString+=(char)c;
     }
   }
+  returnString=nullString;
+  returnString+="wire ";
+  returnString+=Address;returnString+=" ";
+  returnString+=dataString;returnString+=" ";
+  if(inputString==nullString)returnString+="E404";
+  else returnString+=inputString;
 }
 
 void getAddresses(){
@@ -148,10 +162,13 @@ boolean chechAddress(){
 }
 
 void rc(){
-  byte l=dataString.length(), Q=24;  
+  byte l=dataString.length(),Q;
+  returnString=nullString;
+  returnString+="rc ";  
   if(dataString.startsWith("I")){
     tempString=dataString.substring(1,l);
     int value=tempString.toInt();
+    returnString+=value;
     mySwitch.send(value,16);
   }
   else if(dataString.startsWith("b") && l>1){
@@ -169,19 +186,20 @@ void rc(){
     if(value<16777216) Q=24;
     if(value<65536) Q=16;
     if(value<256) Q=8;
+    returnString+=value;
     mySwitch.send(value,Q);
   }
 
-  else if(dataString=="A")mySwitch.send(5588305,24);
-  else if(dataString=="a")mySwitch.send(5588308,24);
-  else if(dataString=="B")mySwitch.send(5591377,24);
-  else if(dataString=="b")mySwitch.send(5591380,24);
-  else if(dataString=="C")mySwitch.send(5592145,24);
-  else if(dataString=="c")mySwitch.send(5592148,24);
-  else if(dataString=="D")mySwitch.send(5592337,24);
-  else if(dataString=="d")mySwitch.send(5592340,24);
-  else if(dataString=="E")mySwitch.send(1394001,24);
-  else if(dataString=="e")mySwitch.send(1394004,24);
+  else if(dataString=="A"){returnString+="A";mySwitch.send(5588305,24);}
+  else if(dataString=="a"){returnString+="a";mySwitch.send(5588308,24);}
+  else if(dataString=="B"){returnString+="B";mySwitch.send(5591377,24);}
+  else if(dataString=="b"){returnString+="b";mySwitch.send(5591380,24);}
+  else if(dataString=="C"){returnString+="C";mySwitch.send(5592145,24);}
+  else if(dataString=="c"){returnString+="c";mySwitch.send(5592148,24);}
+  else if(dataString=="D"){returnString+="D";mySwitch.send(5592337,24);}
+  else if(dataString=="d"){returnString+="d";mySwitch.send(5592340,24);}
+  else if(dataString=="E"){returnString+="E";mySwitch.send(1394001,24);}
+  else if(dataString=="e"){returnString+="e";mySwitch.send(1394004,24);}
 }
 
 long pow(int p){
