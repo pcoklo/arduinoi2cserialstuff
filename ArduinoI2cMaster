@@ -12,7 +12,8 @@ int Address=9, Quantity=24;
 byte j=0;
 int t=0;
 int AddressArray[100];
-boolean led=0, grn=0;
+
+boolean led=0, grn=0, d=1;
 
 void setup(){
   analogWrite(BLU,3);
@@ -43,13 +44,20 @@ void serialEvent(){
     delay(10);
   }
   stringHandle();
-  delay(1000);
+  if(d)delay(1000);
   analogWrite(BLU,0);
   analogWrite(RED,0);
+  t=0; grn=0;
 }
 
 void stringHandle(){
   if(inputString=="get")Serial.println(returnString);
+  
+  else if(inputString=="delay"){
+    d=!d;
+    returnString=nullString;
+    returnString+=d;
+  }
   
   else if(inputString=="led"){
     led=!led;
@@ -147,7 +155,6 @@ void getAddresses(){
     Wire.beginTransmission(i);
     Wire.write("wire");
     Wire.endTransmission();
-    delay(10);
     Wire.requestFrom(i,Quantity,true);
     while(Wire.available()){
       byte c=Wire.read();
@@ -170,7 +177,6 @@ boolean chechAddress(){
     Wire.beginTransmission(Address);
     Wire.write("wire");
     Wire.endTransmission();
-    delay(10);
     Wire.requestFrom(Address,Quantity,true);
     while(Wire.available()){
       byte c=Wire.read();
@@ -182,8 +188,7 @@ boolean chechAddress(){
     }
     inputString=nullString;
   }
-  if(flag==1)return 1;
-  else return 0;
+  return flag;
 }
 
 void rc(){
